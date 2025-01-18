@@ -15,7 +15,6 @@ Plan:
 - Apply DCT to each patch
 
 
-
 The mathematical definition of the DCT matrix entry for an \(N \times N\) matrix is:
 \[
 M[i][j] = \alpha(i) \cdot \cos\left(\frac{(2j+1) \cdot i \cdot \pi}{2N}\right)
