@@ -3,10 +3,6 @@ import math
 import numpy as np
 from skimage.util import view_as_windows
 
-#############################################
-# JPEG Compression Functions (Grayscale)    #
-#############################################
-
 
 def pad_image(image, patch_size=8):
     """
@@ -299,11 +295,6 @@ def run_length_decode(encoded, block_size=8, zigzag_order=None):
         position += 1
 
     return block
-
-
-#############################################
-# Extension: JPEG Compression for RGB Images#
-#############################################
 
 
 def compress_rgb_image(image, quality=50, patch_size=8):
