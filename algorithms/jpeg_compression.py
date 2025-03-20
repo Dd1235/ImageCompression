@@ -297,6 +297,190 @@ def run_length_decode(encoded, block_size=8, zigzag_order=None):
     return block
 
 
+# ==============================
+# Huffman Coding for RLE Data
+# ==============================
+
+
+# A simple node class for the Huffman tree
+class HuffmanNode:
+    def __init__(self, symbol=None, freq=0, left=None, right=None):
+        self.symbol = symbol
+        self.freq = freq
+        self.left = left
+        self.right = right
+
+    def __lt__(self, other):
+        return self.freq < other.freq
+
+
+def build_frequency_table(rle_data):
+    """
+    Build a frequency table for symbols in the RLE data.
+    rle_data: list of RLE lists (each is a list of (skip, value) pairs)
+    """
+    freq = {}
+    for patch in rle_data:
+        for symbol in patch:
+            freq[symbol] = freq.get(symbol, 0) + 1
+    return freq
+
+
+def build_huffman_tree(freq_table):
+    """
+    Build the Huffman tree given a frequency table.
+    """
+    import heapq
+
+    heap = []
+    for symbol, freq in freq_table.items():
+        heapq.heappush(heap, HuffmanNode(symbol, freq))
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+        merged = HuffmanNode(None, left.freq + right.freq, left, right)
+        heapq.heappush(heap, merged)
+    return heap[0]
+
+
+def generate_huffman_codes(node, prefix="", code_table=None):
+    """
+    Recursively traverse the Huffman tree to generate a code table.
+    """
+    if code_table is None:
+        code_table = {}
+    if node.symbol is not None:
+        code_table[node.symbol] = prefix
+    else:
+        generate_huffman_codes(node.left, prefix + "0", code_table)
+        generate_huffman_codes(node.right, prefix + "1", code_table)
+    return code_table
+
+
+def build_decoding_tree(code_table):
+    """
+    Build a decoding tree (as nested dictionaries) from the Huffman code table.
+    """
+    root = {}
+    for symbol, code in code_table.items():
+        node = root
+        for bit in code:
+            if bit not in node:
+                node[bit] = {}
+            node = node[bit]
+        node["symbol"] = symbol
+    return root
+
+
+def huffman_encode_rle(rle_data):
+    """
+    Apply Huffman encoding to a list of RLE lists.
+    Returns a tuple (encoded_patches, code_table) where encoded_patches is a list
+    of bit strings for each patch.
+    """
+    freq_table = build_frequency_table(rle_data)
+    tree = build_huffman_tree(freq_table)
+    code_table = generate_huffman_codes(tree)
+    encoded_patches = []
+    for patch in rle_data:
+        encoded = "".join(code_table[symbol] for symbol in patch)
+        encoded_patches.append(encoded)
+    return encoded_patches, code_table
+
+
+def huffman_decode_string(encoded, decoding_tree):
+    """
+    Decode a single Huffman-encoded bitstring using the decoding tree.
+    """
+    decoded = []
+    node = decoding_tree
+    for bit in encoded:
+        node = node[bit]
+        if "symbol" in node:
+            decoded.append(node["symbol"])
+            node = decoding_tree
+    return decoded
+
+
+def huffman_decode_rle(encoded_patches, code_table):
+    """
+    Decode a list of Huffman-encoded bit strings back into RLE lists.
+    """
+    decoding_tree = build_decoding_tree(code_table)
+    decoded_patches = []
+    for encoded in encoded_patches:
+        patch = huffman_decode_string(encoded, decoding_tree)
+        decoded_patches.append(patch)
+    return decoded_patches
+
+
+# ==============================
+# Image Compression / Decompression Pipeline
+# ==============================
+
+
+# def compress_rgb_image(image, quality=50, patch_size=8, use_huffman=False):
+#     """
+#     Compress an RGB image by processing each channel independently.
+#     If use_huffman is True, applies Huffman encoding on the RLE output.
+#     Returns a list (one per channel) with compressed data.
+#     """
+#     compressed_channels = []
+#     h, w, _ = image.shape
+#     padded_channels = [pad_image(image[:, :, i], patch_size) for i in range(3)]
+
+#     for channel in padded_channels:
+#         patches = split_image_into_patches(channel, patch_size)
+#         dct_patches = apply_dct(patches, patch_size)
+#         quantized_patches = apply_quantization(dct_patches, quality)
+#         zz_order = generate_zigzag_order(patch_size)
+#         rle_encoded = [
+#             run_length_encode(patch, zz_order) for patch in quantized_patches
+#         ]
+
+#         channel_data = {"shape": channel.shape}
+#         if use_huffman:
+#             encoded_huff, code_table = huffman_encode_rle(rle_encoded)
+#             channel_data["huffman"] = {
+#                 "encoded": encoded_huff,
+#                 "code_table": code_table,
+#             }
+#         else:
+#             channel_data["rle"] = rle_encoded
+
+#         compressed_channels.append(channel_data)
+#     return compressed_channels
+
+
+# def decompress_rgb_image(
+#     compressed_channels, patch_size=8, quality=50, use_huffman=False
+# ):
+#     """
+#     Decompress an RGB image from its compressed channels.
+#     """
+#     decompressed_channels = []
+#     for channel_data in compressed_channels:
+#         shape = channel_data["shape"]
+#         zz_order = generate_zigzag_order(patch_size)
+#         if use_huffman:
+#             encoded = channel_data["huffman"]["encoded"]
+#             code_table = channel_data["huffman"]["code_table"]
+#             rle_encoded = huffman_decode_rle(encoded, code_table)
+#         else:
+#             rle_encoded = channel_data["rle"]
+
+#         quantized_patches = [
+#             run_length_decode(encoded, patch_size, zz_order) for encoded in rle_encoded
+#         ]
+#         quantized_patches = np.array(quantized_patches)
+#         dct_patches = apply_dequantization(quantized_patches, quality)
+#         patches = apply_idct(dct_patches, patch_size)
+#         decompressed_channel = combine_patches_into_image(patches, shape, patch_size)
+#         decompressed_channels.append(decompressed_channel)
+#     decompressed_image = np.stack(decompressed_channels, axis=-1)
+#     return decompressed_image
+
+
 def compress_rgb_image(image, quality=50, patch_size=8):
     """
     Compress an RGB image by processing each channel independently.
