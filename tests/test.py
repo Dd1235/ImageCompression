@@ -12,7 +12,7 @@ from algorithms.jpeg_compression import *
 
 def test():
 
-    # --- Grayscale JPEG Compression Example ---
+    #  Grayscale JPEG Compression Example
     # Load a grayscale image from skimage
     original_gray = color.rgb2gray(data.astronaut())
     original_gray = (original_gray * 255).astype(np.uint8)
@@ -26,7 +26,7 @@ def test():
     dct_patches = apply_dct(patches, patch_size)
     quantized_patches = apply_quantization(dct_patches, quality=50)
 
-    # (Optional) RLE on each patch
+    #  RLE on each patch
     zz_order = generate_zigzag_order(patch_size)
     rle_encoded = [run_length_encode(patch, zz_order) for patch in quantized_patches]
 
@@ -51,7 +51,7 @@ def test():
     plt.title("Reconstructed Grayscale")
     plt.show()
 
-    # --- RGB JPEG Compression Example ---
+    #  RGB JPEG Compression Example
     # Load an RGB image
     original_rgb = data.astronaut()
     compressed_rgb = compress_rgb_image(original_rgb, quality=50, patch_size=8)
@@ -66,7 +66,7 @@ def test():
     plt.title("Reconstructed RGB")
     plt.show()
 
-    # --- PCA-Based Compression Example for a Single Grayscale Image ---
+    # PCA-Based Compression Example for a Single Grayscale Image
     n_components = 50
     pca_data = pca_compress_image(original_gray, n_components)
     reconstructed_pca_gray = pca_reconstruct_image(pca_data)
@@ -80,7 +80,7 @@ def test():
     plt.title("PCA-Reconstructed Grayscale")
     plt.show()
 
-    # --- PCA-Based Compression Example for a Dataset of Grayscale Images ---
+    #  PCA-Based Compression Example for a Dataset of Grayscale Images
     # For demonstration, we duplicate the same image several times.
     images = [original_gray for _ in range(10)]
     pca_dataset = pca_compress_dataset(images, n_components=50)
